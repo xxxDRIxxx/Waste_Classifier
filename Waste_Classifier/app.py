@@ -3,52 +3,52 @@ import cv2
 import numpy as np
 from ultralytics import YOLO
 from PIL import Image
-import os
-
-# 🧭 Automatically find the model file in the same directory as this script
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "my_model.pt")
+from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
 
 st.set_page_config(page_title="Waste Classifier", page_icon="🗑️", layout="wide")
 st.title("🚀 Waste Classifier using YOLOv8")
 
+# ============================
+# Load model with caching
+# ============================
 @st.cache_resource
 def load_model():
-    if not os.path.exists(MODEL_PATH):
-        st.error(f"❌ Model file not found at: {MODEL_PATH}")
-        st.stop()
-    model = YOLO(MODEL_PATH)
+    model = YOLO("my_model.pt")  # make sure this file is in the repo root
     return model
 
 model = load_model()
 
-# Sidebar
+# ============================
+# Sidebar settings
+# ============================
 st.sidebar.header("⚙️ Settings")
 source_option = st.sidebar.radio("Select input source:", ("📸 Webcam", "📂 Upload Image"))
 confidence = st.sidebar.slider("Confidence threshold", 0.1, 1.0, 0.25, 0.05)
 
+# ============================
+# Webcam mode (using streamlit-webrtc)
+# ============================
 if source_option == "📸 Webcam":
-    st.info("Click 'Start' to activate your webcam.")
-    run = st.checkbox("Start webcam")
-    FRAME_WINDOW = st.image([])
+    st.info("📸 Allow your browser to access the webcam for live detection.")
 
-    if run:
-        cap = cv2.VideoCapture(0)
-        if not cap.isOpened():
-            st.warning("Failed to access webcam.")
-        else:
-            while run:
-                ret, frame = cap.read()
-                if not ret:
-                    st.warning("Failed to read from webcam.")
-                    break
-                results = model.predict(frame, conf=confidence, verbose=False)
-                annotated = results[0].plot()
-                annotated = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
-                FRAME_WINDOW.image(annotated)
-        cap.release()
+    class YOLOVideoTransformer(VideoTransformerBase):
+        def transform(self, frame):
+            img = frame.to_ndarray(format="bgr24")
+            results = model.predict(img, conf=confidence, verbose=False)
+            annotated = results[0].plot()
+            return cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
 
+    webrtc_streamer(
+        key="yolo-waste",
+        video_transformer_factory=YOLOVideoTransformer,
+        media_stream_constraints={"video": True, "audio": False},
+    )
+
+# ============================
+# Image upload mode
+# ============================
 elif source_option == "📂 Upload Image":
-    uploaded_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
+    uploaded_file = st.file_uploader("📂 Upload an image", type=["jpg", "jpeg", "png"])
     if uploaded_file:
         image = Image.open(uploaded_file)
         img_np = np.array(image)
@@ -56,4 +56,4 @@ elif source_option == "📂 Upload Image":
         results = model.predict(img_bgr, conf=confidence, verbose=False)
         annotated = results[0].plot()
         annotated = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
-        st.image(annotated, caption="🪄 Detected Waste", use_column_width=True)
+        st.image(annotated, caption="🧠 Detected Waste", use_column_width=True)
