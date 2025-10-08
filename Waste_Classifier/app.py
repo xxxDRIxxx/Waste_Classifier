@@ -4,29 +4,37 @@ import numpy as np
 from ultralytics import YOLO
 from PIL import Image
 from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
+import os
 
+# ============================
+# ✅ Set up page
+# ============================
 st.set_page_config(page_title="Waste Classifier", page_icon="🗑️", layout="wide")
 st.title("🚀 Waste Classifier using YOLOv8")
 
 # ============================
-# Load model with caching
+# 📁 Model path handling
 # ============================
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "my_model.pt")
+
 @st.cache_resource
 def load_model():
-    model = YOLO("my_model.pt")  # make sure this file is in the repo root
-    return model
+    if not os.path.exists(MODEL_PATH):
+        st.error(f"❌ Model file not found at: {MODEL_PATH}")
+        st.stop()
+    return YOLO(MODEL_PATH)
 
 model = load_model()
 
 # ============================
-# Sidebar settings
+# ⚙️ Sidebar settings
 # ============================
 st.sidebar.header("⚙️ Settings")
 source_option = st.sidebar.radio("Select input source:", ("📸 Webcam", "📂 Upload Image"))
 confidence = st.sidebar.slider("Confidence threshold", 0.1, 1.0, 0.25, 0.05)
 
 # ============================
-# Webcam mode (using streamlit-webrtc)
+# 📸 Webcam mode (streamlit-webrtc)
 # ============================
 if source_option == "📸 Webcam":
     st.info("📸 Allow your browser to access the webcam for live detection.")
@@ -36,6 +44,7 @@ if source_option == "📸 Webcam":
             img = frame.to_ndarray(format="bgr24")
             results = model.predict(img, conf=confidence, verbose=False)
             annotated = results[0].plot()
+            # Convert back to RGB for Streamlit display
             return cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
 
     webrtc_streamer(
@@ -45,7 +54,7 @@ if source_option == "📸 Webcam":
     )
 
 # ============================
-# Image upload mode
+# 🖼️ Image upload mode
 # ============================
 elif source_option == "📂 Upload Image":
     uploaded_file = st.file_uploader("📂 Upload an image", type=["jpg", "jpeg", "png"])
