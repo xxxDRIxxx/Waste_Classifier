@@ -4,6 +4,7 @@ import numpy as np
 from ultralytics import YOLO
 from PIL import Image
 from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
+import av  # 👈 Required for recv()
 import os
 
 # ============================
@@ -34,18 +35,20 @@ source_option = st.sidebar.radio("Select input source:", ("📸 Webcam", "📂 U
 confidence = st.sidebar.slider("Confidence threshold", 0.1, 1.0, 0.25, 0.05)
 
 # ============================
-# 📸 Webcam mode (streamlit-webrtc)
+# 📸 Webcam mode (streamlit-webrtc with recv)
 # ============================
 if source_option == "📸 Webcam":
     st.info("📸 Allow your browser to access the webcam for live detection.")
 
     class YOLOVideoTransformer(VideoTransformerBase):
-        def transform(self, frame):
+        def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
             img = frame.to_ndarray(format="bgr24")
             results = model.predict(img, conf=confidence, verbose=False)
             annotated = results[0].plot()
-            # Convert back to RGB for Streamlit display
-            return cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
+            annotated_rgb = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
+
+            # Convert back to VideoFrame
+            return av.VideoFrame.from_ndarray(annotated_rgb, format="rgb24")
 
     webrtc_streamer(
         key="yolo-waste",
