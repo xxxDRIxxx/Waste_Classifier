@@ -9,7 +9,7 @@ st.title("🚀 Waste Classifier using YOLOv8")
 
 @st.cache_resource
 def load_model():
-    model = YOLO("best.pt")  # make sure this file is in the repo
+    model = YOLO("my_model.pt")  # make sure this file is in the repo
     return model
 
 model = load_model()
