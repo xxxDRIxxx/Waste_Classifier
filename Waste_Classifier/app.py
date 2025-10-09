@@ -7,6 +7,13 @@ from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
 import av
 import os
 
+import streamlit as st
+
+if st.sidebar.button("🔄 Clear Cache"):
+    st.cache_data.clear()
+    st.cache_resource.clear()
+    st.rerun()
+
 # ============================
 # ✅ Load model path
 # ============================
