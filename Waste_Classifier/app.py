@@ -10,7 +10,7 @@ import os
 # ============================
 # ✅ Load model path
 # ============================
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "my_model.pt")
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "my_model 1.pt")
 
 st.set_page_config(page_title="Waste Classifier", page_icon="🗑️", layout="wide")
 st.title("🚀 Waste Classifier using YOLOv8")
