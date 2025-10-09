@@ -8,15 +8,38 @@ import av
 import os
 
 # ============================
-# ✅ Load model path
+# ✅ Paths
 # ============================
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "my_model 1.pt")
+REACT_UI_PATH = "ui/dist/index.html"  # <- after building React
 
+# ============================
+# ✅ Page Config
+# ============================
 st.set_page_config(page_title="Waste Classifier", page_icon="🗑️", layout="wide")
+
+# ============================
+# ✅ Custom CSS (for iframe & layout)
+# ============================
+st.markdown("""
+    <style>
+    .main {
+        padding: 0;
+        margin: 0;
+    }
+    iframe {
+        width: 100%;
+        height: 550px;
+        border: none;
+        border-radius: 10px;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 st.title("🚀 Waste Classifier using YOLOv8")
 
 # ============================
-# ✅ Load YOLO model
+# ✅ Load Model
 # ============================
 @st.cache_resource
 def load_model():
@@ -31,8 +54,19 @@ model = load_model()
 # ✅ Sidebar Settings
 # ============================
 st.sidebar.header("⚙️ Settings")
-source_option = st.sidebar.radio("Select input source:", ("📸 Webcam", "📂 Upload Image"))
+source_option = st.sidebar.radio("Select input source:", ("🖼️ React UI", "📸 Webcam", "📂 Upload Image"))
 confidence = st.sidebar.slider("Confidence threshold", 0.01, 1.0, 0.25, 0.01)
+
+# ============================
+# ✅ React UI Embed
+# ============================
+if source_option == "🖼️ React UI":
+    st.markdown(
+        f"""
+        <iframe src="{REACT_UI_PATH}"></iframe>
+        """,
+        unsafe_allow_html=True
+    )
 
 # ============================
 # ✅ YOLO Video Transformer (recv replaces transform)
@@ -45,7 +79,7 @@ class YOLOVideoTransformer(VideoTransformerBase):
         return av.VideoFrame.from_ndarray(annotated, format="bgr24")
 
 # ============================
-# Webcam Mode
+# 📸 Webcam Mode
 # ============================
 if source_option == "📸 Webcam":
     st.info("📸 Allow browser webcam access for live YOLO detection")
@@ -67,22 +101,18 @@ if source_option == "📸 Webcam":
     if not webrtc_ctx.state.playing:
         st.warning("⚠️ Waiting for webcam connection... Check your network or browser permissions.")
 
-
 # ============================
-# ✅ Image Upload Mode
+# 📂 Image Upload Mode
 # ============================
 elif source_option == "📂 Upload Image":
     uploaded_file = st.file_uploader("📂 Upload an image", type=["jpg", "jpeg", "png"])
     if uploaded_file is not None:
-        # Convert image
         image = Image.open(uploaded_file).convert("RGB")
         img_np = np.array(image)
         img_bgr = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
 
-        # Run YOLO
         results = model.predict(img_bgr, conf=confidence, verbose=False)
         annotated = results[0].plot()
 
-        # Convert BGR to RGB for display
         annotated_rgb = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
         st.image(annotated_rgb, caption="🧠 Detected Waste", use_container_width=True)
