@@ -45,15 +45,28 @@ class YOLOVideoTransformer(VideoTransformerBase):
         return av.VideoFrame.from_ndarray(annotated, format="bgr24")
 
 # ============================
-# ✅ Webcam Mode
+# Webcam Mode
 # ============================
 if source_option == "📸 Webcam":
-    st.info("📸 Click 'Start' and allow browser webcam access for real-time detection.")
-    webrtc_streamer(
-        key="yolo-waste",
-        video_transformer_factory=YOLOVideoTransformer,
-        media_stream_constraints={"video": True, "audio": False},
-    )
+    st.info("📸 Allow browser webcam access for live YOLO detection")
+
+    RTC_CONFIGURATION = RTCConfiguration({
+        "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
+    })
+
+    try:
+        webrtc_ctx = webrtc_streamer(
+            key="yolo-waste",
+            video_transformer_factory=YOLOVideoTransformer,
+            media_stream_constraints={"video": True, "audio": False},
+            rtc_configuration=RTC_CONFIGURATION,
+        )
+    except Exception as e:
+        st.error(f"⚠️ Webcam error: {e}")
+
+    if not webrtc_ctx.state.playing:
+        st.warning("⚠️ Waiting for webcam connection... Check your network or browser permissions.")
+
 
 # ============================
 # ✅ Image Upload Mode
